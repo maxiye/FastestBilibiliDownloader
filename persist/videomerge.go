@@ -2,6 +2,7 @@ package persist
 
 import (
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -55,24 +56,28 @@ func mergeVideo(video *model.Video, wg *sync.WaitGroup) {
 	defer wg.Done()
 	aidDirPath := tool.GetAidFileDownloadDir(video.ParCid.ParAid.Aid, video.ParCid.ParAid.Title)
 	contactTxtPath := filepath.Join(aidDirPath, _contactFileName)
-	videoOutputPath := filepath.Join(aidDirPath, _videoOutputName)
-
+	delFiles, _ := ioutil.ReadDir(aidDirPath)
 	// merge cid
 	for i := int64(1); i <= video.ParCid.ParAid.GetPage(); i++ {
-		err := createMergeCidInfoTxt(aidDirPath, video.ParCid.Page, video.ParCid.AllOrder)
+		err := createMergeCidInfoTxt(aidDirPath, i, video.ParCid.AllOrder)
 		if err != nil {
 			log.Printf("some thing wrong while merging video %d", video.ParCid.ParAid.Aid)
 			return
 		}
-		log.Println(video.ParCid.ParAid.Title, " download completed.Start merging videos now.")
-		cidFilename := fmt.Sprintf("%d.flv", video.ParCid.Page)
+		log.Println(video.ParCid.ParAid.Title, "，分P：", i, " download completed.Start merging videos now.")
+		cidFilename := fmt.Sprintf("%s_P%d.flv", video.ParCid.ParAid.Title, i)
 		cidOutput := filepath.Join(aidDirPath, cidFilename)
 		command := []string{"ffmpeg", "-f", "concat", "-safe", "0", "-i", contactTxtPath, "-c", "copy", cidOutput}
 		findCmd := cmd.NewCmd(command[0], command[1:]...)
 		<-findCmd.Start()
 	}
-
-	err := createMergeAidInfoTxt(aidDirPath, video.ParCid.ParAid.GetPage())
+	_ = os.Remove(contactTxtPath)
+	for _, v := range delFiles {
+		_ = os.Remove(filepath.Join(aidDirPath, v.Name()))
+	}
+	// 多p合并，实际不需要
+	// videoOutputPath := filepath.Join(aidDirPath, video.ParCid.ParAid.Title + ".mp4")
+	/*err := createMergeAidInfoTxt(aidDirPath, video.ParCid.ParAid.GetPage())
 	if err != nil {
 		log.Printf("some thing wrong while merging video %d", video.ParCid.ParAid.Aid)
 		return
@@ -81,7 +86,7 @@ func mergeVideo(video *model.Video, wg *sync.WaitGroup) {
 	findCmd := cmd.NewCmd(command[0], command[1:]...)
 	<-findCmd.Start()
 	log.Println("Video ", video.ParCid.ParAid.Title, " merge is complete.")
-	removeTempFile(aidDirPath, _videoOutputName)
+	removeTempFile(aidDirPath, video.ParCid.ParAid.Title + ".mp4")*/
 }
 
 func createMergeAidInfoTxt(aidPath string, aidPage int64) error {

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -24,10 +25,15 @@ func main() {
 	var idType string
 	var id int64
 	var req *engine.Request
-	fmt.Println("Please enter your id type(`aid` or `upid`)")
-	fmt.Scan(&idType)
-	fmt.Println("Please enter your id")
-	fmt.Scan(&id)
+	flag.StringVar(&idType, "t", "", "id type(`aid` or `upid`)")
+	flag.Int64Var(&id, "i", 0, "`aid` or `upid`")
+	flag.Parse()
+	if idType == "" || id == 0 {
+		fmt.Println("Please enter your id type(`aid` or `upid`)")
+		fmt.Scan(&idType)
+		fmt.Println("Please enter your id")
+		fmt.Scan(&id)
+	}
 
 	if idType == "aid" {
 		req = parser.GetRequestByAid(id)
