@@ -9,6 +9,7 @@ import (
 	"simple-golang-crawler/engine"
 	"simple-golang-crawler/model"
 	"simple-golang-crawler/tool"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -54,18 +55,25 @@ func VideoItemProcessor(wgOutside *sync.WaitGroup) (chan *engine.Item, error) {
 
 func mergeVideo(video *model.Video, wg *sync.WaitGroup) {
 	defer wg.Done()
-	aidDirPath := tool.GetAidFileDownloadDir(video.ParCid.ParAid.Aid, video.ParCid.ParAid.Title)
+	aid := video.ParCid.ParAid.Aid
+	atitle := video.ParCid.ParAid.Title
+	aidDirPath := tool.GetAidFileDownloadDir(aid, atitle)
 	contactTxtPath := filepath.Join(aidDirPath, _contactFileName)
 	delFiles, _ := ioutil.ReadDir(aidDirPath)
 	// merge cid
 	for i := int64(1); i <= video.ParCid.ParAid.GetPage(); i++ {
 		err := createMergeCidInfoTxt(aidDirPath, i, video.ParCid.AllOrder)
 		if err != nil {
-			log.Printf("some thing wrong while merging video %d", video.ParCid.ParAid.Aid)
+			log.Printf("some thing wrong while merging video %d", aid)
 			return
 		}
-		log.Println(video.ParCid.ParAid.Title, "，分P：", i, " download completed.Start merging videos now.")
-		cidFilename := fmt.Sprintf("%s_P%d.flv", video.ParCid.ParAid.Title, i)
+		log.Println(atitle, "，分P：", i, " download completed.Start merging videos now.")
+		cidFilename := ""
+		if strconv.FormatInt(aid, 10) == atitle {
+			cidFilename = fmt.Sprintf("%s_P%d.flv", atitle, i)
+		} else {
+			cidFilename = fmt.Sprintf("%s_%d_P%d.flv", atitle, aid, i)
+		}
 		cidOutput := filepath.Join(aidDirPath, cidFilename)
 		command := []string{"ffmpeg", "-f", "concat", "-safe", "0", "-i", contactTxtPath, "-c", "copy", cidOutput}
 		findCmd := cmd.NewCmd(command[0], command[1:]...)

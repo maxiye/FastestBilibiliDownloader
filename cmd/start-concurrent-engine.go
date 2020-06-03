@@ -22,11 +22,13 @@ func main() {
 		panic(err)
 	}
 
-	var idType string
+	var idType, startDate, endDate string
 	var id int64
 	var req *engine.Request
 	flag.StringVar(&idType, "t", "", "id type(`aid` or `upid`)")
 	flag.Int64Var(&id, "i", 0, "`aid` or `upid`")
+	flag.StringVar(&startDate, "s", "", "上传时间大于该时间：2006-01-02 15:04:05")
+	flag.StringVar(&endDate, "e", "", "上传时间小于该时间：2006-01-02 15:04:05")
 	flag.Parse()
 	if idType == "" || id == 0 {
 		fmt.Println("Please enter your id type(`aid` or `upid`)")
@@ -34,6 +36,7 @@ func main() {
 		fmt.Println("Please enter your id")
 		fmt.Scan(&id)
 	}
+	parser.SetCreatedArea(startDate, endDate)
 
 	if idType == "aid" {
 		req = parser.GetRequestByAid(id)

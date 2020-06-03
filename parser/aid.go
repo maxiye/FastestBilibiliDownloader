@@ -2,15 +2,39 @@ package parser
 
 import (
 	"fmt"
+	"github.com/tidwall/gjson"
 	"simple-golang-crawler/engine"
 	"simple-golang-crawler/fetcher"
 	"simple-golang-crawler/model"
-
-	"github.com/tidwall/gjson"
+	"time"
 )
 
 var _getAidUrlTemp = "https://api.bilibili.com/x/space/arc/search?mid=%d&ps=30&tid=0&pn=%d&keyword=&order=pubdate&jsonp=jsonp"
 var _getCidUrlTemp = "https://api.bilibili.com/x/player/pagelist?aid=%d"
+var createdStart, createdEnd int64
+
+func SetCreatedArea(start string, end string) {
+	if start != "" {
+		if len(start) == 10 {
+			start += " 00:00:00"
+		}
+		if startTime, err := time.Parse("2006-01-02 15:04:05", start); err == nil {
+			createdStart = startTime.Unix()
+		} else {
+			panic("s参数开始时间错误：" + err.Error())
+		}
+	}
+	if end != "" {
+		if len(end) == 10 {
+			end += " 00:00:00"
+		}
+		if endTime, err := time.Parse("2006-01-02 15:04:05", end); err == nil {
+			createdEnd = endTime.Unix()
+		} else {
+			panic("e参数开始时间错误：" + err.Error())
+		}
+	}
+}
 
 func UpSpaceParseFun(contents []byte, url string) engine.ParseResult {
 	var retParseResult engine.ParseResult
@@ -28,8 +52,15 @@ func getAidDetailReqList(pageInfo gjson.Result) ([]*engine.Request, int64) {
 	var retRequests []*engine.Request
 	var upid int64
 	for _, i := range pageInfo.Array() {
-		aid := i.Get("aid").Int()
 		upid = i.Get("mid").Int()
+		created := i.Get("created").Int()
+		if createdStart > 0 && created < createdStart {
+			continue
+		}
+		if createdEnd > 0 && created > createdEnd {
+			continue
+		}
+		aid := i.Get("aid").Int()
 		title := i.Get("title").String()
 		reqUrl := fmt.Sprintf(_getCidUrlTemp, aid)
 		videoAid := model.NewVideoAidInfo(aid, title)
